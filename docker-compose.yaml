@@ -1,0 +1,18 @@
+version: '3'
+
+services:
+    
+  etcd_0:
+    image: cmattoon/etcd3-aws:latest
+    build:
+      context: .
+
+  etcd_1:
+    image: cmattoon/etcd3-aws:latest
+    build:
+      context: .
+
+  etcd_2:
+    image: cmattoon/etcd3-aws:latest
+    build:
+      context: .
