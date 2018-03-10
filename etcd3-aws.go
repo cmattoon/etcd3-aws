@@ -235,7 +235,7 @@ func main() {
 
 	// watch for lifecycle events and remove nodes from the cluster as they are
 	// terminated.
-	go watchLifecycleEvents(s, localInstance)
+	//go watchLifecycleEvents(s, localInstance)
 
 	// Run the etcd command
 	cmd := exec.Command("etcd")
