@@ -13,6 +13,8 @@ all: $(PLATFORM_BINARIES)
 clean:
 	-rm $(PLATFORM_BINARIES)
 
+distall: dist/cacert.pem dist/etcd3-aws.Linux.x86_64 dist/etcd3.Linux.x86_64
+
 dist/cacert.pem:
 	[ -d dist ] || mkdir dist
 	curl -s -o $@ https://curl.haxx.se/ca/cacert.pem
