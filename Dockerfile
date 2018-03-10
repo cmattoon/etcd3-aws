@@ -23,5 +23,5 @@ RUN cp dist/cacert.pem /etc/ssl/ca-bundle.pem \
 ENV PATH=/bin
 ENV TMPDIR=/
 
-CMD ["/bin/etcd-aws"]
+CMD ["/bin/etcd3-aws"]
 
