@@ -11,9 +11,28 @@ import (
 	"github.com/crewjam/ec2cluster"
 )
 
+
+func lifecycleOnTerminate() (shouldContinue bool, err error) {
+	return true, nil
+}
+
+func lifecycleOnLaunch() (shouldContinue bool, err error) {
+	return true, nil
+}
+
 // handleLifecycleEvent is invoked whenever we get a lifecycle terminate message. It removes
 // terminated instances from the etcd cluster.
 func handleLifecycleEvent(m *ec2cluster.LifecycleMessage) (shouldContinue bool, err error) {
+	switch m.LifecycleTransition {
+	case "autoscaling:EC2_INSTANCE_TERMINATING":
+		return lifecycleOnTerminate()
+	case "autoscaling:EC2_INSTANCE_LAUNCHING":
+		return lifecycleOnLaunch()
+	}
+	return true, nil
+}
+
+func oldHandleLifecycleEveent(m *ec2cluster.LifecycleMessage) (shouldContinue bool, err error) {
 	if m.LifecycleTransition != "autoscaling:EC2_INSTANCE_TERMINATING" {
 		return true, nil
 	}
