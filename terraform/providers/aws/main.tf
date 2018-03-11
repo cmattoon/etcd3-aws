@@ -1,3 +1,6 @@
+provider "aws" {
+  region = "${var.region}"
+}
 
 module "etcd" {
   source = "./../../modules/etcd3-aws"

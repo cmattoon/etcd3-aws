@@ -47,8 +47,3 @@ variable "dns_record_elb" {
   default     = "etcd"
 }
 
-variable "num_nodes" {
-  description = "The number of etcd nodes to maintain"
-  type        = "string"
-  default     = "3"
-}

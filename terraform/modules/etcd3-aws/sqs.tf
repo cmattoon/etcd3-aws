@@ -1,4 +1,4 @@
-resource "as_sqs_queue" "events" {
+resource "aws_sqs_queue" "events" {
   name = "etcd-${var.name}-events"
 }
 
