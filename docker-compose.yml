@@ -2,17 +2,7 @@ version: '2.1'
 
 services:
     
-  etcd_0:
-    image: cmattoon/etcd3-aws:latest
-    build:
-      context: .
-
-  etcd_1:
-    image: cmattoon/etcd3-aws:latest
-    build:
-      context: .
-
-  etcd_2:
+  etcd3_aws:
     image: cmattoon/etcd3-aws:latest
     build:
       context: .
