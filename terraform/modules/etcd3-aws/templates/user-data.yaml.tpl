@@ -15,6 +15,7 @@ coreos:
         ExecStart=/usr/bin/docker run --name etcd3-aws \
             -e ETCD_BACKUP_BUCKET=${backup_bucket_name} \
             -e ETCD_BACKUP_KEY=${backup_key} \
+            -p 2379:2379 -p 2380:2380 \
             -v /var/lib/etcd2:/var/lib/etcd2 \
             --rm cmattoon/etcd3-aws
 

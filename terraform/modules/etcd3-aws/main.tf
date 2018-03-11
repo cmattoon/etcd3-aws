@@ -66,11 +66,12 @@ resource "aws_launch_configuration" "etcd" {
 }
 
 resource "aws_autoscaling_group" "etcd" {
-  name                 = "etcd-${var.name}"
+  name                 = "etcd-${var.name}-${aws_launch_configuration.etcd.name}"
   load_balancers       = ["${aws_elb.etcd.name}"]
   min_size             = "${var.num_nodes}"
   desired_capacity     = "${var.num_nodes}"
   max_size             = "${var.num_nodes*2}"
+  min_elb_capacity     = "${var.num_nodes}"
   
   vpc_zone_identifier  = ["${var.subnets}"]
   launch_configuration = "${aws_launch_configuration.etcd.name}"
@@ -88,6 +89,10 @@ resource "aws_autoscaling_group" "etcd" {
     lifecycle_transition    = "autoscaling:EC2_INSTANCE_TERMINATING"
     notification_target_arn = "${aws_sqs_queue.events.arn}"
     role_arn                = "${aws_iam_role.lifecycle_hook.arn}"
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
   
   enabled_metrics = [
