@@ -21,7 +21,7 @@ coreos:
         ExecStop=/usr/bin/docker rm -f etcd3-aws
 
     - name: cfn-signal.service
-      command: start
+      command:  start
       enable: true
       content: |
         [Unit]
@@ -34,13 +34,7 @@ coreos:
         
         [Service]
         Type=oneshot
-        ExecStart=/bin/bash -c '\
-        set -ex;
-        eval $(docker run crewjam/ec2cluster); \
-        docker run --rm crewjam/awscli cfn-signal \
-        --resource MasterAutoscale --region ${region} || true; \
-        '
-
-      
+        ExecStart=/bin/bash -c 'set -ex; eval $(docker run crewjam/ec2cluster); docker run --rm crewjam/awscli cfn-signal --resource MasterAutoscale --region ${region} || true;'
+              
       
     
