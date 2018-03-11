@@ -33,6 +33,14 @@ resource "aws_security_group_rule" "allow_all_etcd_traffic" {
   self              = true
 }
 
+resource "aws_security_group_rule" "allow_ssh_from_range" {
+  type        = "ingress"
+  from_port   = 22
+  to_port     = 22
+  protocol    = "tcp"
+  cidr_blocks = ["${var.ssh_cidr_block}"]
+}
+
 resource "aws_security_group_rule" "allow_etcd_client_traffic" {
   type                     = "ingress"
   from_port                = 2379

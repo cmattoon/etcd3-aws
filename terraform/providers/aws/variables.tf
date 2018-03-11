@@ -47,3 +47,8 @@ variable "dns_record_elb" {
   default     = "etcd"
 }
 
+variable "ssh_cidr_block" {
+  description = "Allow SSH from this CIDR block (e.g., '172.31.0.0/16')"
+  type        = "string"
+  default     = "172.31.0.0/16"
+}

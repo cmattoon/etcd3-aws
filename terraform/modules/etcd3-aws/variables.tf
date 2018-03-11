@@ -52,3 +52,9 @@ variable "num_nodes" {
   type        = "string"
   default     = "3"
 }
+
+variable "ssh_cidr_block" {
+  description = "Allow SSH from this CIDR block"
+  type        = "string"
+  default     = "172.31.0.0/16"
+}
