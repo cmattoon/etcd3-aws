@@ -1,0 +1,14 @@
+version: '2.1'
+
+services:
+    
+  etcd3_aws:
+    image: cmattoon/etcd3-aws:latest
+    build:
+      context: .
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    volumes:
+      - /var/lib/etcd:/var/lib/etcd
+      
