@@ -1,58 +1,101 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"net/http"
 	"time"
-
+	"os"
+	
 	log "github.com/Sirupsen/logrus"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/crewjam/awsregion"
 	"github.com/crewjam/ec2cluster"
+	"github.com/coreos/etcd/clientv3"
 )
+
+var cli *clientv3.Client
+
+func getInstance(m *ec2cluster.LifecycleMessage) (*ec2.Instance, error) {
+	awsSession := session.New()
+	if region := os.Getenv("AWS_REGION"); region != "" {
+		awsSession.Config.WithRegion(region)
+	}
+	awsregion.GuessRegion(awsSession.Config)
+	
+	ec2svc := ec2.New(awsSession)
+	resp, err := ec2svc.DescribeInstances(&ec2.DescribeInstancesInput{
+		InstanceIds: []*string{aws.String(m.EC2InstanceID)},
+	})
+	
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.Reservations) != 1 || len(resp.Reservations[0].Instances) != 1 {
+		return nil, fmt.Errorf("Cannot find instance: %s", m.EC2InstanceID)
+	}
+	
+	return resp.Reservations[0].Instances[0], nil
+}
+
+func lifecycleOnTerminate(m *ec2cluster.LifecycleMessage) (shouldContinue bool, err error) {
+	resp, err := cli.MemberList(context.Background())
+	if err != nil {
+		log.Fatalf("ERROR: Could not list cluster members: %s", err)
+	}
+	newInstance, err := getInstance(m)
+	if err != nil {
+		log.Fatalf("ERROR: Could not get EC2 Instance: %s", err)
+	}
+		
+	for _, member := range resp.Members {
+		if member.Name == m.EC2InstanceID {
+			log.Info("Removing %s at %s", m.EC2InstanceID, newInstance.PrivateIpAddress)
+			cli.MemberRemove(context.Background(), member.ID)
+			return true, nil
+		}
+	}
+	return true, nil
+}
+
+func lifecycleOnLaunch(m *ec2cluster.LifecycleMessage) (shouldContinue bool, err error) {
+	resp, err := cli.MemberList(context.Background())
+	if err != nil {
+		log.Fatalf("ERROR: Could not list cluster members: %s", err)
+	}
+	newInstance, err := getInstance(m)
+	if err != nil {
+		log.Fatalf("ERROR: Could not get EC2 Instance: %s", err)
+	}
+	for _, member := range resp.Members {
+		if member.Name == m.EC2InstanceID {
+			log.Infof("Instance %s already in cluster...skipping 'add'", m.EC2InstanceID)
+			return true, nil
+		}
+	}
+	peer_urls := []string{fmt.Sprintf("http://%s:2380", newInstance.PrivateIpAddress)}
+	log.Infof("Adding new member: %s", peer_urls)
+	cli.MemberAdd(context.Background(), peer_urls)
+	return true, nil
+}
 
 // handleLifecycleEvent is invoked whenever we get a lifecycle terminate message. It removes
 // terminated instances from the etcd cluster.
 func handleLifecycleEvent(m *ec2cluster.LifecycleMessage) (shouldContinue bool, err error) {
-	if m.LifecycleTransition != "autoscaling:EC2_INSTANCE_TERMINATING" {
-		return true, nil
+	switch m.LifecycleTransition {
+	case "autoscaling:EC2_INSTANCE_TERMINATING":
+		return lifecycleOnTerminate(m)
+	case "autoscaling:EC2_INSTANCE_LAUNCHING":
+		return lifecycleOnLaunch(m)
 	}
-
-	// look for the instance in the cluster
-	resp, err := http.Get(fmt.Sprintf("%s/v2/members", etcdLocalURL))
-	if err != nil {
-		return false, err
-	}
-	members := etcdMembers{}
-	if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {
-		return false, err
-	}
-	memberID := ""
-	for _, member := range members.Members {
-		if member.Name == m.EC2InstanceID {
-			memberID = member.ID
-		}
-	}
-
-	if memberID == "" {
-		log.WithField("InstanceID", m.EC2InstanceID).Warn("received termination event for non-member")
-		return true, nil
-	}
-
-	log.WithFields(log.Fields{
-		"InstanceID": m.EC2InstanceID,
-		"MemberID":   memberID}).Info("removing from cluster")
-	req, _ := http.NewRequest("DELETE", fmt.Sprintf("%s/v2/members/%s", etcdLocalURL, memberID), nil)
-	_, err = http.DefaultClient.Do(req)
-	if err != nil {
-		return false, err
-	}
-
-	return false, nil
+	return true, nil
 }
 
-func watchLifecycleEvents(s *ec2cluster.Cluster, localInstance *ec2.Instance) {
+func watchLifecycleEvents(s *ec2cluster.Cluster, localInstance *ec2.Instance, client clientv3.Client) {
 	etcdLocalURL = fmt.Sprintf("http://%s:2379", *localInstance.PrivateIpAddress)
+	cli = &client
 	for {
 		queueUrl, err := s.LifecycleEventQueueURL()
 

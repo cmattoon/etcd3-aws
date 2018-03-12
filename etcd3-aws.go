@@ -192,21 +192,21 @@ func main() {
 			log.Printf("%s: %s", filepath.Join(*dataDir, "member"), err)
 		}
 	}
+
+	etcdClient, err := clientv3.New(clientv3.Config{
+		Endpoints: []string{fmt.Sprintf("http://%s:2379", *localInstance.PrivateIpAddress)},
+		DialTimeout: 5 * time.Second,
+	})
+	
+	if err != nil {
+		log.Fatalf("ERROR: Could not get etcdClient: %s", err)
+	}
+	
+	defer etcdClient.Close()
 	
 	go func() {
 		// wait for etcd to start
-		for {
-			etcdClient, err := clientv3.New(clientv3.Config{
-				Endpoints: []string{fmt.Sprintf("http://%s:2379", *localInstance.PrivateIpAddress)},
-				DialTimeout: 5 * time.Second,
-			})
-
-			if err != nil {
-				log.Fatalf("ERROR: Could not get etcdClient: %s", err)
-			}
-			
-			defer etcdClient.Close()
-			
+		for {		
 			ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
 			// Attempt to sync
 			err = etcdClient.Sync(ctx)
@@ -232,10 +232,10 @@ func main() {
 			log.Fatalf("ERROR: %s", err)
 		}
 	}()
-
+	
 	// watch for lifecycle events and remove nodes from the cluster as they are
 	// terminated.
-	//go watchLifecycleEvents(s, localInstance)
+	go watchLifecycleEvents(s, localInstance, *etcdClient)
 
 	// Run the etcd command
 	cmd := exec.Command("etcd")

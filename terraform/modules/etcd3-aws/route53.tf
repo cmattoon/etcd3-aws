@@ -5,7 +5,7 @@ data "aws_route53_zone" "main" {
 
 resource "aws_route53_record" "elb" {
   zone_id = "${data.aws_route53_zone.main.id}"
-  name    = "${var.dns_record}.${var.dns_zone_domain}"
+  name    = "${var.dns_record_elb}.${var.dns_zone_domain}"
   type    = "A"
 
   # ALIAS records always have TTL=60
