@@ -3,16 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
 	"os"
-	
+	"time"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/coreos/etcd/clientv3"
 	"github.com/crewjam/awsregion"
 	"github.com/crewjam/ec2cluster"
-	"github.com/coreos/etcd/clientv3"
 )
 
 var cli *clientv3.Client
@@ -23,12 +23,12 @@ func getInstance(m *ec2cluster.LifecycleMessage) (*ec2.Instance, error) {
 		awsSession.Config.WithRegion(region)
 	}
 	awsregion.GuessRegion(awsSession.Config)
-	
+
 	ec2svc := ec2.New(awsSession)
 	resp, err := ec2svc.DescribeInstances(&ec2.DescribeInstancesInput{
 		InstanceIds: []*string{aws.String(m.EC2InstanceID)},
 	})
-	
+
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func getInstance(m *ec2cluster.LifecycleMessage) (*ec2.Instance, error) {
 	if len(resp.Reservations) != 1 || len(resp.Reservations[0].Instances) != 1 {
 		return nil, fmt.Errorf("Cannot find instance: %s", m.EC2InstanceID)
 	}
-	
+
 	return resp.Reservations[0].Instances[0], nil
 }
 
@@ -49,7 +49,7 @@ func lifecycleOnTerminate(m *ec2cluster.LifecycleMessage) (shouldContinue bool, 
 	if err != nil {
 		log.Fatalf("ERROR: Could not get EC2 Instance: %s", err)
 	}
-		
+
 	for _, member := range resp.Members {
 		if member.Name == m.EC2InstanceID {
 			log.Info("Removing %s at %s", m.EC2InstanceID, newInstance.PrivateIpAddress)

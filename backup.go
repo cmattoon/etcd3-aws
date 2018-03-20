@@ -1,9 +1,16 @@
 package main
 
+// export ETCDCTL_API=3
+// etcdctl get "" --from-key
+// etcdctl get "" --prefix=true
+//
+// export ETCDCTL_API=
+// etcdctl ls -r /
+
 import (
 	"compress/gzip"
-	"encoding/json"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -74,22 +81,20 @@ func getInstanceTag(instance *ec2.Instance, tagName string) string {
 // dumpEtcdNode writes a JSON representation of the nodes and and below `key`
 // to `w`. Returns the number of nodes traversed.
 func dumpEtcdNode(key string, etcdClient *clientv3.Client, w io.Writer) (int, error) {
-	log.Info("dumpEtcdNode not implemented")
-	
-	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	response, err := etcdClient.Get(ctx, key)
 	cancel()
-	
+
 	if err != nil {
 		log.Fatalf("ERROR: Failed to get key '%s': %s", key, err)
 		return 0, err
 	}
-	
+
 	for _, ev := range response.Kvs {
 		log.Infof("'%s': '%s'", ev.Key, ev.Value)
 		return 0, nil
 	}
-	
+
 	// childNodes := response.Node.Nodes
 	// response.Node.Nodes = nil
 	// if err := json.NewEncoder(w).Encode(response.Node); err != nil {
@@ -130,25 +135,25 @@ func backupOnce(s *ec2cluster.Cluster, backupBucket, backupKey, dataDir string) 
 
 	// Create etcdClient
 	etcdClient, err := clientv3.New(clientv3.Config{
-		Endpoints: []string{fmt.Sprintf("http://%s:2379", *instance.PrivateIpAddress)},
+		Endpoints:   []string{fmt.Sprintf("http://%s:2379", *instance.PrivateIpAddress)},
 		DialTimeout: 5 * time.Second,
 	})
-	
+
 	if err != nil {
 		log.Fatalf("ERROR: Could not get etcdClient: %s", err)
 	}
-	
+
 	defer etcdClient.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
-	
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+
 	err = etcdClient.Sync(ctx)
 	cancel()
-	
+
 	if err != nil {
 		log.Fatalf("ERROR: Failed to sync cluster: %s", err)
 	}
-	
+
 	var valueCount int
 	bodyReader, bodyWriter := io.Pipe()
 	go func() {
@@ -206,7 +211,7 @@ func backupOnce(s *ec2cluster.Cluster, backupBucket, backupKey, dataDir string) 
 func loadEtcdNode(etcdClient *clientv3.Client, r io.Reader) error {
 	log.Info("loadEtcdNode not implemented")
 	return nil
-	
+
 	// jsonReader := json.NewDecoder(r)
 	// for {
 	// 	node := etcd.Node{}
@@ -252,23 +257,23 @@ func restoreBackup(s *ec2cluster.Cluster, backupBucket, backupKey, dataDir strin
 		return err
 	}
 	etcdClient, err := clientv3.New(clientv3.Config{
-		Endpoints: []string{fmt.Sprintf("http://%s:2379", *instance.PrivateIpAddress)},
+		Endpoints:   []string{fmt.Sprintf("http://%s:2379", *instance.PrivateIpAddress)},
 		DialTimeout: 5 * time.Second,
 	})
 	if err != nil {
 		log.Fatalf("ERROR: Could not get etcdClient: %s", err)
 	}
-	
+
 	defer etcdClient.Close()
-	
-	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	err = etcdClient.Sync(ctx)
 	cancel()
-	
+
 	if err != nil {
 		log.Fatalf("ERROR: Failed to Sync: %s", err)
 	}
-	
+
 	s3svc := s3.New(s.AwsSession)
 	resp, err := s3svc.GetObject(&s3.GetObjectInput{
 		Key:    &backupKey,

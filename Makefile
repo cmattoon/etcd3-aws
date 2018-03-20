@@ -31,7 +31,7 @@ dist/etcd3-aws.Linux.x86_64:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags '-s' \
 		-o $@ ./etcd3-aws.go ./backup.go ./lifecycle.go
 
-container:
+container: dist/cacert.pem dist/etcd3.Linux.x86_64 dist/etcd3-aws.Linux.x86_64
 	docker build -t $(IMAGE_NAME) .
 
 check:
